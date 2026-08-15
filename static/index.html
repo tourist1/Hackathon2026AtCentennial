@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Irrigation Demo</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Hackathon Project</p>
+          <h1>Smart Irrigation Decision System</h1>
+        </div>
+        <div class="scenario-buttons">
+          <button class="scenario active" data-scenario="baseline">Baseline</button>
+          <button class="scenario" data-scenario="heatwave">Heatwave</button>
+          <button class="scenario" data-scenario="rainstorm">Rainstorm</button>
+          <button class="scenario" data-scenario="dry_soil">Dry Soil</button>
+        </div>
+      </header>
+
+      <section class="summary-grid">
+        <div class="card highlight">
+          <div class="label">Current irrigation action</div>
+          <div id="decision-action" class="big-value">Loading...</div>
+          <div id="decision-reason" class="muted">Waiting for sensor data...</div>
+        </div>
+
+        <div class="card">
+          <div class="label">Soil moisture</div>
+          <div id="soil-moisture" class="big-value">0%</div>
+          <div class="meter">
+            <span id="moisture-bar"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Water needed</div>
+          <div id="water-needed" class="big-value">0 L</div>
+          <div id="water-saved" class="muted">Projected water saved: 0 L</div>
+        </div>
+
+        <div class="card">
+          <div class="label">Weather</div>
+          <div id="weather-status" class="big-value">--</div>
+          <div id="weather-detail" class="muted">Loading forecast...</div>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <div class="card panel">
+          <h2>Farm status</h2>
+          <div class="stat-row">
+            <span>Crop</span>
+            <strong id="crop-name">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Growth stage</span>
+            <strong id="crop-stage">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Soil temperature</span>
+            <strong id="soil-temp">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Humidity</span>
+            <strong id="humidity">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>ET0</span>
+            <strong id="et0">--</strong>
+          </div>
+        </div>
+
+        <div class="card panel">
+          <h2>Efficiency metrics</h2>
+          <div class="stat-row">
+            <span>Water use efficiency</span>
+            <strong id="wue">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Energy cost</span>
+            <strong id="energy-cost">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Soil depletion</span>
+            <strong id="depletion">--</strong>
+          </div>
+          <div class="stat-row">
+            <span>Rain chance</span>
+            <strong id="rain-probability">--</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="card panel agent-panel">
+        <h2>Agent activity log</h2>
+        <ul id="agent-log" class="agent-log"></ul>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
