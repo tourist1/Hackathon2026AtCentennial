@@ -1,0 +1,6 @@
+{
+  "name": "AgriFlow - Multi-Agent Smart Irrigation Platform",
+  "description": "Multi-agent precision irrigation platform optimizing crop water use efficiency (WUE), FAO-56 evapotranspiration modeling, soil sensor telemetry, and predictive weather scheduling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
