@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
+import { createFarmRecommendationRoutes } from './utils/farmRecommendationEngine';
 
 dotenv.config();
 
@@ -345,6 +346,10 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Farm Recommendation Engine - Converts sensor data to actionable farm decisions
+  app.use('/api/farm', createFarmRecommendationRoutes());
+  console.log('🌾 Farm Recommendation API mounted at /api/farm/*');
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`AgriFlow Server running on http://localhost:${PORT}`);
