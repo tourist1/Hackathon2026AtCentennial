@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { MultiAgentFlowVisualizer } from './components/MultiAgentFlowVisualizer';
 import { FarmZoneGrid } from './components/FarmZoneGrid';
 import { SoilMoistureDepthProfile } from './components/SoilMoistureDepthProfile';
+import { SoilHealthAssessment } from './components/SoilHealthAssessment';
 import { WeatherAndETDashboard } from './components/WeatherAndETDashboard';
 import { InteractiveScenarioBar } from './components/InteractiveScenarioBar';
 import { AgentTerminalFeed } from './components/AgentTerminalFeed';
@@ -450,6 +451,8 @@ export default function App() {
             <SoilMoistureDepthProfile zone={selectedZone} />
           </div>
         </div>
+
+        <SoilHealthAssessment zone={selectedZone} decisionChain={decisionChain} />
 
         {/* 6. Two Column Grid: Weather/FAO-56 ET Dashboard & Live Agent Terminal */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

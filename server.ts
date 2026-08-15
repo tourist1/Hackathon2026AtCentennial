@@ -3,12 +3,12 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
-import { createFarmRecommendationRoutes } from './utils/farmRecommendationEngine';
+import { createFarmRecommendationRoutes } from './src/utils/farmRecommendationEngine';
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 3002;
 
 app.use(express.json());
 
@@ -26,6 +26,59 @@ function getGeminiClient(): GoogleGenAI | null {
     });
   }
   return aiClient;
+}
+
+// Soil-health interpretation is deliberately conservative: EC/SAR, nutrient,
+// and amendment decisions should be confirmed with calibrated probes/lab tests.
+function buildSoilHealthAssessment(zone: any) {
+  const soil = zone?.soilHealth || {
+    texture: zone?.soilType || 'Loam', ph: 7.0, electricalConductivityDsM: 1,
+    sodiumAdsorptionRatio: 3, nitrogenPpm: 20, phosphorusPpm: 18, potassiumPpm: 160,
+    organicMatterPct: 3, microbialActivity: 'MODERATE', compactionKpa: 1500, drainageClass: 'GOOD',
+  };
+  const dry = (zone?.currentVwc || 24) < (zone?.madThreshold || 25);
+  const highSalinity = soil.electricalConductivityDsM >= 2;
+  const sodiumRisk = soil.sodiumAdsorptionRatio >= 8;
+  const nutrientLow = soil.nitrogenPpm < 18 || soil.phosphorusPpm < 15 || soil.potassiumPpm < 150;
+  const compacted = soil.compactionKpa >= 2000;
+  const poorBiology = soil.organicMatterPct < 2.5 || soil.microbialActivity === 'LOW';
+  const phStatus = soil.ph < 6.2 ? 'ACIDIC' : soil.ph > 7.8 ? 'ALKALINE' : 'FAVORABLE';
+  const risks = [highSalinity || sodiumRisk, nutrientLow, compacted, soil.drainageClass === 'POOR', dry].filter(Boolean).length;
+  const recommendedActions: Array<{ priority: 'MONITOR' | 'PLAN' | 'SOON' | 'URGENT'; action: string; reason: string }> = [];
+  if (highSalinity || sodiumRisk) recommendedActions.push({ priority: 'SOON', action: 'Confirm EC/SAR with a laboratory soil test and review drainage before any leaching plan.', reason: `EC ${soil.electricalConductivityDsM} dS/m and SAR ${soil.sodiumAdsorptionRatio} indicate salinity/sodicity risk; excess sodium can reduce infiltration and water uptake.` });
+  if (nutrientLow) recommendedActions.push({ priority: 'SOON', action: 'Use a crop-stage-specific nutrient plan after a soil/tissue test.', reason: `Available N/P/K is ${soil.nitrogenPpm}/${soil.phosphorusPpm}/${soil.potassiumPpm} ppm; one or more nutrients are below the demo target range.` });
+  if (phStatus !== 'FAVORABLE') recommendedActions.push({ priority: 'PLAN', action: 'Confirm pH with a laboratory test before selecting an amendment.', reason: `pH ${soil.ph} may limit nutrient availability; amendment rate depends on buffer pH and crop requirements.` });
+  if (compacted) recommendedActions.push({ priority: 'PLAN', action: 'Reduce traffic on wet soil and assess targeted aeration, deep-rooted cover crops, or subsoiling.', reason: `Compaction of ${soil.compactionKpa} kPa can restrict roots, oxygen, and infiltration.` });
+  if (poorBiology) recommendedActions.push({ priority: 'PLAN', action: 'Build organic matter with compost, residue retention, and/or cover crops.', reason: `Organic matter ${soil.organicMatterPct}% and microbial activity ${soil.microbialActivity} suggest limited biological resilience.` });
+  if (soil.drainageClass === 'POOR') recommendedActions.push({ priority: 'SOON', action: 'Inspect drainage and avoid irrigation that would keep the root zone saturated.', reason: 'Poor drainage raises waterlogging, root-disease, and nutrient-loss risk.' });
+  if (dry) recommendedActions.push({ priority: 'SOON', action: 'Apply the irrigation recommendation only after checking the drainage and salinity constraints below.', reason: 'Root-zone moisture is below the management threshold.' });
+  if (!recommendedActions.length) recommendedActions.push({ priority: 'MONITOR', action: 'Continue monitoring soil and weather trends; no soil amendment is indicated by the current demo readings.', reason: 'Current physical and chemistry indicators are within the configured demo ranges.' });
+
+  return {
+    soilHealthAssessment: {
+      overallStatus: risks >= 3 ? 'URGENT' : risks >= 2 ? 'ACTION_NEEDED' : risks ? 'WATCH' : 'HEALTHY',
+      texture: { value: soil.texture, finding: `${soil.texture} influences water storage, infiltration, and nutrient retention.` },
+      ph: { value: soil.ph, status: phStatus, finding: phStatus === 'FAVORABLE' ? 'pH is in a generally favorable range for nutrient uptake.' : `pH may reduce availability of some nutrients; verify before amending.` },
+      salinitySodicity: { ecDsM: soil.electricalConductivityDsM, sar: soil.sodiumAdsorptionRatio, status: highSalinity || sodiumRisk ? 'WATCH' : 'LOW_RISK', finding: highSalinity || sodiumRisk ? 'EC/SAR suggests a salinity or sodicity risk. Sodium is monitored as a soil-structure risk, not as a crop requirement.' : 'Current EC/SAR indicates low salinity and sodicity risk in this demo profile.' },
+      nutrientAvailability: { status: nutrientLow ? 'LIMITED' : 'ADEQUATE', finding: `N ${soil.nitrogenPpm}, P ${soil.phosphorusPpm}, K ${soil.potassiumPpm} ppm. ${nutrientLow ? 'Confirm with soil/tissue testing before applying nutrients.' : 'No nutrient constraint is indicated by the configured demo range.'}` },
+      moistureDrainage: { status: dry ? 'DRY' : soil.drainageClass === 'POOR' ? 'DRAINAGE_WATCH' : 'BALANCED', finding: `${dry ? 'Moisture is below the management threshold. ' : 'Moisture is within the current management range. '}Drainage class: ${soil.drainageClass}.` },
+      organicMatterMicrobes: { status: poorBiology ? 'BUILD' : 'STABLE', finding: `Organic matter ${soil.organicMatterPct}% with ${soil.microbialActivity.toLowerCase()} microbial activity.` },
+      compactionAeration: { status: compacted ? 'COMPACTED' : 'ADEQUATE', finding: compacted ? `${soil.compactionKpa} kPa may limit root growth and aeration.` : `${soil.compactionKpa} kPa indicates acceptable aeration in this demo profile.` },
+    },
+    cropImpact: {
+      risk: risks >= 3 ? 'HIGH' : risks >= 2 ? 'MODERATE' : 'LOW',
+      summary: risks ? 'Soil constraints could reduce root function, nutrient uptake, and crop resilience if they persist.' : 'No major soil-health constraint is indicated by the current demo readings.',
+      impacts: [
+        ...(dry ? ['Moisture deficit can reduce photosynthesis and fruit/grain development.'] : []),
+        ...(highSalinity || sodiumRisk ? ['Salinity or sodium can reduce water uptake and impair soil structure.'] : []),
+        ...(nutrientLow ? ['Limited nutrient availability can slow canopy growth and reduce yield potential.'] : []),
+        ...(compacted ? ['Compaction can restrict roots and reduce oxygen available to roots and microbes.'] : []),
+        ...(soil.drainageClass === 'POOR' ? ['Poor drainage can increase root-disease and nutrient-leaching risk.'] : []),
+        ...(!risks ? ['Continue trend monitoring to preserve root health and yield potential.'] : []),
+      ],
+    },
+    recommendedActions,
+  };
 }
 
 // 1. Live Weather Proxy via Open-Meteo with fallback
@@ -95,6 +148,7 @@ app.post('/api/agents/deliberate', async (req, res) => {
 
   const ai = getGeminiClient();
   if (!ai) {
+    const soilAnalysis = buildSoilHealthAssessment(zone);
     // Generate intelligent structured algorithmic response if API key is not yet configured
     const isRainForecast = (weather?.rainProb24h || 0) > 60 || activeScenario === 'rainstorm';
     const isHeatwave = (weather?.temp || 0) > 35 || activeScenario === 'heatwave';
@@ -179,8 +233,9 @@ app.post('/api/agents/deliberate', async (req, res) => {
             safety_token: 'AGRIFLOW_SAFE_OK',
           },
         },
+        ...soilAnalysis,
       },
-      synthesis: explanation,
+      synthesis: `${explanation} ${soilAnalysis.cropImpact.summary}`,
     });
   }
 
@@ -194,6 +249,7 @@ The user's farm has multiple zones. Here is the current state for Zone "${zone?.
 - Current Root Zone Soil Moisture (VWC): ${zone?.currentVwc || 22}% (Tension: ${zone?.soilTensionKpa || 55} kPa)
 - Weather Telemetry: Temp ${weather?.temp || 28}°C, Humidity ${weather?.humidity || 40}%, Solar Radiation ${weather?.solarRad || 650} W/m², 24h Rain Prob ${weather?.rainProb24h || 15}%, ET₀ ${weather?.et0 || 5.1} mm/day
 - Active Simulation Edge Case / Scenario: "${activeScenario || 'Normal Operations'}"
+- Soil-health telemetry: texture ${zone?.soilHealth?.texture || zone?.soilType || 'Loam'}, pH ${zone?.soilHealth?.ph || 7.0}, EC ${zone?.soilHealth?.electricalConductivityDsM || 1.0} dS/m, SAR ${zone?.soilHealth?.sodiumAdsorptionRatio || 3}, N/P/K ${zone?.soilHealth?.nitrogenPpm || 20}/${zone?.soilHealth?.phosphorusPpm || 18}/${zone?.soilHealth?.potassiumPpm || 160} ppm, organic matter ${zone?.soilHealth?.organicMatterPct || 3}%, microbial activity ${zone?.soilHealth?.microbialActivity || 'MODERATE'}, compaction ${zone?.soilHealth?.compactionKpa || 1500} kPa, drainage ${zone?.soilHealth?.drainageClass || 'GOOD'}.
 
 Perform step-by-step agronomic multi-agent deliberation:
 1. Sensor Agent (signal health, moisture deficit, tension kPa evaluation)
@@ -201,6 +257,7 @@ Perform step-by-step agronomic multi-agent deliberation:
 3. Crop Physiology Agent (Kc scaling, crop water demand ETc = Kc * ET₀, root zone depletion)
 4. Strategy & Optimization Agent (exact decision: irrigate, delay for rain, split micro-pulse, or shift to off-peak grid tariff)
 5. Actuator & Guardrail Agent (relay safety check, hydraulic flow limit, MQTT payload)
+6. Soil-health assessment and crop-impact analysis. Treat sodium as a salinity/sodicity risk—not a crop nutrient requirement—and recommend lab confirmation before any amendment or leaching prescription.
 
 Return a strictly formatted JSON object matching this schema:
 {
@@ -228,6 +285,18 @@ Return a strictly formatted JSON object matching this schema:
       "safety_token": string
     }
   },
+  "soilHealthAssessment": {
+    "overallStatus": "HEALTHY" | "WATCH" | "ACTION_NEEDED" | "URGENT",
+    "texture": { "value": string, "finding": string },
+    "ph": { "value": number, "status": string, "finding": string },
+    "salinitySodicity": { "ecDsM": number, "sar": number, "status": string, "finding": string },
+    "nutrientAvailability": { "status": string, "finding": string },
+    "moistureDrainage": { "status": string, "finding": string },
+    "organicMatterMicrobes": { "status": string, "finding": string },
+    "compactionAeration": { "status": string, "finding": string }
+  },
+  "cropImpact": { "risk": "LOW" | "MODERATE" | "HIGH" | "CRITICAL", "summary": string, "impacts": string[] },
+  "recommendedActions": [{ "priority": "MONITOR" | "PLAN" | "SOON" | "URGENT", "action": string, "reason": string }],
   "synthesis": string
 }`;
 
@@ -241,10 +310,17 @@ Return a strictly formatted JSON object matching this schema:
     });
 
     const parsed = JSON.parse(response.text || '{}');
+    const fallbackSoilAnalysis = buildSoilHealthAssessment(zone);
+    const agentChain = {
+      ...parsed,
+      soilHealthAssessment: parsed.soilHealthAssessment || fallbackSoilAnalysis.soilHealthAssessment,
+      cropImpact: parsed.cropImpact || fallbackSoilAnalysis.cropImpact,
+      recommendedActions: parsed.recommendedActions || fallbackSoilAnalysis.recommendedActions,
+    };
     return res.json({
       success: true,
-      agentChain: parsed,
-      synthesis: parsed.synthesis || parsed.strategyAgent?.reasoning || 'Deliberation completed.',
+      agentChain,
+      synthesis: agentChain.synthesis || agentChain.strategyAgent?.reasoning || 'Deliberation completed.',
     });
   } catch (err: any) {
     console.error('Gemini deliberation error:', err);

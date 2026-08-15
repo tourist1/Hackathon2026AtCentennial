@@ -9,6 +9,25 @@ export interface SoilLayerMoisture {
   tempC: number;
 }
 
+/**
+ * Soil chemistry and physical-condition readings. Values are currently
+ * simulation/demo telemetry; production deployments should populate them from
+ * calibrated probes and laboratory soil tests.
+ */
+export interface SoilHealthProfile {
+  texture: string;
+  ph: number;
+  electricalConductivityDsM: number;
+  sodiumAdsorptionRatio: number;
+  nitrogenPpm: number;
+  phosphorusPpm: number;
+  potassiumPpm: number;
+  organicMatterPct: number;
+  microbialActivity: 'LOW' | 'MODERATE' | 'ACTIVE';
+  compactionKpa: number;
+  drainageClass: 'POOR' | 'MODERATE' | 'GOOD';
+}
+
 export interface FarmZone {
   id: number;
   name: string;
@@ -30,6 +49,7 @@ export interface FarmZone {
   currentStage: string;
   stageProgressDays: number;
   layers: SoilLayerMoisture[];
+  soilHealth: SoilHealthProfile;
   lastIrrigated: string;
   accumulatedWaterTodayLiters: number;
 }
@@ -97,6 +117,26 @@ export interface AgentDecisionChain {
       safety_token: string;
     };
   };
+  soilHealthAssessment?: {
+    overallStatus: 'HEALTHY' | 'WATCH' | 'ACTION_NEEDED' | 'URGENT';
+    texture: { value: string; finding: string };
+    ph: { value: number; status: string; finding: string };
+    salinitySodicity: { ecDsM: number; sar: number; status: string; finding: string };
+    nutrientAvailability: { status: string; finding: string };
+    moistureDrainage: { status: string; finding: string };
+    organicMatterMicrobes: { status: string; finding: string };
+    compactionAeration: { status: string; finding: string };
+  };
+  cropImpact?: {
+    risk: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+    summary: string;
+    impacts: string[];
+  };
+  recommendedActions?: Array<{
+    priority: 'MONITOR' | 'PLAN' | 'SOON' | 'URGENT';
+    action: string;
+    reason: string;
+  }>;
   synthesis: string;
 }
 

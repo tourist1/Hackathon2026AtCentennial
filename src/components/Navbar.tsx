@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-sans">
-                AquaMind <span className="text-emerald-500 underline decoration-2 underline-offset-4">AI</span>
+                AgriFlow <span className="text-emerald-500 underline decoration-2 underline-offset-4">AI</span>
               </h1>
               <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
                 Multi-Agent OS
