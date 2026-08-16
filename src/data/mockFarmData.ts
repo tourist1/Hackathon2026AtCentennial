@@ -161,6 +161,7 @@ export const INITIAL_FARM_ZONES: FarmZone[] = [
       { depthCm: 90, vwc: 26.5, tensionKpa: 44, tempC: 20.1 },
       { depthCm: 120, vwc: 29.8, tensionKpa: 36, tempC: 18.5 },
     ],
+    soilHealth: { texture: 'Sandy Loam', ph: 7.6, electricalConductivityDsM: 1.1, sodiumAdsorptionRatio: 4.2, nitrogenPpm: 22, phosphorusPpm: 18, potassiumPpm: 165, organicMatterPct: 2.4, microbialActivity: 'MODERATE', compactionKpa: 1450, drainageClass: 'GOOD' },
   },
   {
     id: 2,
@@ -190,6 +191,7 @@ export const INITIAL_FARM_ZONES: FarmZone[] = [
       { depthCm: 80, vwc: 31.2, tensionKpa: 36, tempC: 19.8 },
       { depthCm: 100, vwc: 33.5, tensionKpa: 33, tempC: 18.2 },
     ],
+    soilHealth: { texture: 'Silt Loam', ph: 6.7, electricalConductivityDsM: 0.7, sodiumAdsorptionRatio: 2.8, nitrogenPpm: 28, phosphorusPpm: 24, potassiumPpm: 190, organicMatterPct: 3.8, microbialActivity: 'ACTIVE', compactionKpa: 1650, drainageClass: 'MODERATE' },
   },
   {
     id: 3,
@@ -219,6 +221,7 @@ export const INITIAL_FARM_ZONES: FarmZone[] = [
       { depthCm: 65, vwc: 29.0, tensionKpa: 48, tempC: 21.0 },
       { depthCm: 80, vwc: 32.4, tensionKpa: 37, tempC: 19.5 },
     ],
+    soilHealth: { texture: 'Clay Loam', ph: 7.9, electricalConductivityDsM: 2.3, sodiumAdsorptionRatio: 8.6, nitrogenPpm: 16, phosphorusPpm: 11, potassiumPpm: 142, organicMatterPct: 2.1, microbialActivity: 'LOW', compactionKpa: 2300, drainageClass: 'POOR' },
   },
   {
     id: 4,
@@ -248,6 +251,7 @@ export const INITIAL_FARM_ZONES: FarmZone[] = [
       { depthCm: 100, vwc: 23.8, tensionKpa: 56, tempC: 18.2 },
       { depthCm: 150, vwc: 26.0, tensionKpa: 39, tempC: 16.8 },
     ],
+    soilHealth: { texture: 'Gravelly Loam', ph: 7.3, electricalConductivityDsM: 0.9, sodiumAdsorptionRatio: 3.5, nitrogenPpm: 14, phosphorusPpm: 15, potassiumPpm: 155, organicMatterPct: 1.8, microbialActivity: 'MODERATE', compactionKpa: 1200, drainageClass: 'GOOD' },
   },
 ];
 
